@@ -3,7 +3,17 @@ import { pipeline } from 'stream/promises';
 import { URLSearchParams } from 'url';
 import { Readable } from 'stream';
 
-async function downloadCrx(extensionUrl: string, outputPath?: string): Promise<void> {
+export async function downloadCrx(extensionUrl: string, outputPath?: string): Promise<void> {
+  if (!extensionUrl) {
+    throw new Error('URL不能为空');
+  }
+
+  try {
+    new URL(extensionUrl);
+  } catch (error) {
+    throw new Error('无效的URL格式');
+  }
+
   try {
     // 从URL中提取扩展ID
     const extId = extractExtensionId(extensionUrl);
@@ -51,14 +61,3 @@ function extractExtensionId(url: string): string | null {
   const match = url.match(/\/([a-z]{32})/i);
   return match ? match[1] : null;
 }
-
-// 使用命令行传入 extension url
-const extensionUrl = process.argv[2];
-if (!extensionUrl) {
-  console.error('请提供扩展URL');
-  process.exit(1);
-}
-
-downloadCrx(extensionUrl)
-  .then(() => console.log('CRX文件下载完成'))
-  .catch(error => console.error('下载失败:', error));

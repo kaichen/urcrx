@@ -40,7 +40,7 @@ function crxToZip(buf: Buffer): Buffer {
   }
 }
 
-function unzipFile(filePath: string, targetFile: string, outputDir: string = 'output'): void {
+export function unzip(filePath: string, targetFile: string, outputDir: string = 'output'): void {
   console.log(filePath, targetFile, outputDir);
   
   const fileBuffer = fs.readFileSync(filePath);
@@ -54,7 +54,8 @@ function unzipFile(filePath: string, targetFile: string, outputDir: string = 'ou
 
     zipfile.readEntry();
     zipfile.on('entry', (entry) => {
-      if (entry.fileName === targetFile) {
+      const genericFileName = entry.fileName.split('.')[0] + '.js';
+      if (entry.fileName === targetFile || (genericFileName === targetFile && entry.fileName.endsWith('.js'))) {
         zipfile.openReadStream(entry, (err, readStream) => {
           if (err) {
             console.error('读取文件流时发生错误:', err);
@@ -65,11 +66,11 @@ function unzipFile(filePath: string, targetFile: string, outputDir: string = 'ou
             fs.mkdirSync(outputDir, { recursive: true });
           }
 
-          const outputPath = path.join(outputDir, targetFile);
+          const outputPath = path.join(outputDir, genericFileName);
           const writeStream = fs.createWriteStream(outputPath);
           readStream.pipe(writeStream);
           writeStream.on('finish', () => {
-            console.log(`文件 ${targetFile} 已成功解压到 ${outputDir} 目录`);
+            console.log(`文件 ${entry.fileName} 已成功解压到 ${outputDir} 目录，并重命名为 ${genericFileName}`);
             
             // 读取解压后的文件内容
             const fileContent = fs.readFileSync(outputPath, 'utf8');
@@ -80,7 +81,7 @@ function unzipFile(filePath: string, targetFile: string, outputDir: string = 'ou
             // 将美化后的内容写回文件
             fs.writeFileSync(outputPath, beautifiedContent);
             
-            console.log(`文件 ${targetFile} 已成功美化`);
+            console.log(`文件 ${genericFileName} 已成功美化`);
             
             zipfile.close();
           });
@@ -91,14 +92,3 @@ function unzipFile(filePath: string, targetFile: string, outputDir: string = 'ou
     });
   });
 }
-
-const filePath = process.argv[2];
-const targetFile = process.argv[3];
-
-if (!filePath || !targetFile) {
-  console.error('请提供文件路径和目标文件名作为命令行参数');
-  console.error('使用方法: ts-node unzip-page.ts <文件路径> <目标文件名>');
-  process.exit(1);
-}
-
-unzipFile(filePath, targetFile);

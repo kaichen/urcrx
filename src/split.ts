@@ -2,32 +2,26 @@
 
 const fs = require('fs').promises;
 const path = require('path');
-const { program } = require('commander');
 
-program
-  .version('1.0.0')
-  .description('Process a Rollup file and organize its code')
-  .requiredOption('-f, --file <path>', 'Path to the Rollup file')
-  .option('-s, --search <string>', 'Filter string to search in implementations', '')
-  .parse(process.argv);
-
-const options = program.opts();
-
-async function processRollupFile(filePath: string, searchString: string) {
+export async function split(filePath: string, searchString: string) {
   const fileExists = await fs.exists(filePath);
-  console.log(`处理文件：${filePath}`);
+  console.log(`开始处理文件：${filePath}`);
+  if (!fileExists) {
+    console.error(`文件不存在：${filePath}`);
+    return;
+  }
   try {
-    // 读取文件内容
-    const fileContent = await fs.readFile(filePath, 'utf8');
+    // 导入指定的 js 文件
+    const rollupObject = await import(filePath);
 
-    // 将文件内容解析为 JavaScript 对象
-    const rollupObject = eval('(' + fileContent + ')');
+    // 获取默认导出的对象
+    const rollupContent = rollupObject.default;
 
     // 使用修改后的 organizeRollupCode 函数
-    const { idToFilenameMap, idToFunctionMap } = organizeRollupCode(rollupObject);
+    const { idToFilenameMap, idToFunctionMap } = organizeRollupCode(rollupContent);
 
     // 为输出创建一个新目录
-    const outputDir = path.join(path.dirname(filePath), 'output');
+    const outputDir = path.join(path.dirname('.'), 'output');
     await fs.mkdir(outputDir, { recursive: true });
     // 用于存储每个文件的内容
     const fileContents: { [key: string]: string } = {};
@@ -62,8 +56,28 @@ async function processRollupFile(filePath: string, searchString: string) {
   }
 }
 
+function cleanImplementationString(implementationString: string): string {
+  const lines = implementationString.split('\n');
+  let startIndex = 0;
+  let endIndex = lines.length - 1;
+
+  // 去掉开头的 `function(e, t, r) {`
+  if (lines[0].trim().startsWith('function(')) {
+    startIndex = 1;
+  }
+
+  // 去掉最末尾非空行的 `}`
+  while (endIndex > startIndex && lines[endIndex].trim() === '') {
+    endIndex--;
+  }
+  if (lines[endIndex].trim() === '}') {
+    endIndex--;
+  }
+
+  return lines.slice(startIndex, endIndex + 1).join('\n');
+}
+
 function organizeRollupCode(rollupObject: any) {
-  // console.log('rollupObject:')
   const idToFilenameMap: { [key: string]: string } = {};
   const idToFunctionMap: { [key: string]: string } = {};
 
@@ -74,12 +88,9 @@ function organizeRollupCode(rollupObject: any) {
       idToFilenameMap[dependencyId] = filename;
     }
     
-    // 记录 id 与函数字符串的关系
-    idToFunctionMap[id] = implementation.toString();
+    // 记录 id 与函数字符串的关系，并清理实现字符串
+    idToFunctionMap[id] = cleanImplementationString(implementation.toString());
   }
 
   return { idToFilenameMap, idToFunctionMap };
 }
-
-// 运行主函数
-processRollupFile(options.file, options.search);

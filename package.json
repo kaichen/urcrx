@@ -1,22 +1,32 @@
 {
-  "name": "unroll-rollup-js",
-  "module": "index.ts",
-  "type": "module",
-  "devDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
-    "@types/adm-zip": "^0.5.5",
-    "@types/bun": "latest",
-    "@types/yauzl": "^2.10.3",
-    "prettier": "^3.3.3",
-    "js-beautify": "^1.14.6"
+  "name": "urcrx",
+  "version": "0.1.0",
+  "repository": "https://github.com/kaichen/urcrx",
+  "license": "MIT",
+  "author": {
+    "name": "Kai Chen",
+    "email": "kai@thekaiway.com"
   },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+  "bin": {
+    "urcrx": "cli.js"
+  },
+  "scripts": {
+    "build": "bun build --target=node ./src/index.ts --outdir ./dist"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
-    "adm-zip": "^0.5.15",
     "commander": "^12.1.0",
-    "yauzl": "^3.1.3"
+    "yauzl": "^3.1.3",
+    "js-beautify": "^1.14.6"
+  },
+  "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+    "@types/bun": "latest",
+    "@types/node": "^18.19.45",
+    "@types/yauzl": "^2.10.3",
+    "prettier": "^3.3.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
   }
 }

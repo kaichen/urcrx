@@ -179,3 +179,8 @@ dist
 *.crx
 sidepanel.js
 options.js
+popup.js
+newtab.js
+devtools.js
+output
+temp
