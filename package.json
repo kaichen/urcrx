@@ -16,12 +16,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
     "commander": "^12.1.0",
-    "yauzl": "^3.1.3",
-    "js-beautify": "^1.14.6"
+    "js-beautify": "^1.14.6",
+    "yauzl": "^3.1.3"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
     "@types/bun": "latest",
+    "@types/js-beautify": "^1.14.3",
     "@types/node": "^18.19.45",
     "@types/yauzl": "^2.10.3",
     "prettier": "^3.3.3"

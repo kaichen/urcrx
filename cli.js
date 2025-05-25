@@ -3,19 +3,18 @@ import { Command } from 'commander';
 import { downloadCrx, unzip, split, normalize, rewrite } from './dist/index.js';
 const program = new Command();
 
-program.command('download')
+program.command('download <url>')
   .description('download extension')
-  .option('--url <url>', 'extension url')
-  .action(async (options) => {
-    await downloadCrx(options.url);
+  .action(async (url, options) => {
+    await downloadCrx(url);
   });
 
-program.command('unzip')
+program.command('unzip <path>')
   .description('unzip extension')
-  .option('-p, --path <path>', 'extension file path')
   .option('-e, --entrypoint <entrypoint>', 'entrypoint path')
-  .action(async (options) => {
-    await unzip(options.path, options.entrypoint);
+  .option('-i, --inspect', 'only show file tree without extracting')
+  .action(async (path, options) => {
+    await unzip(path, options.entrypoint, 'output', options.inspect);
   });
 
 program.command('split')
