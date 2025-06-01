@@ -1,0 +1,54 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Testing & Debugging Guide
+
+## Development Testing
+Since this is a CLI tool, testing involves:
+
+### Manual Testing Workflow
+1. **Build**: `bun run build` to compile TypeScript
+2. **Test CLI**: `bun run ./cli.js <command>` to test locally
+3. **Test Individual Commands**:
+   ```bash
+   # Test download functionality
+   bun run ./cli.js download <chrome-extension-url>
+   
+   # Test unzip with inspection
+   bun run ./cli.js unzip <crx-file> --inspect
+   
+   # Test processing pipeline
+   bun run ./cli.js normalize --path <js-file>
+   bun run ./cli.js rewrite --path <js-file>
+   ```
+
+## Common Issues & Solutions
+
+### Known Bugs (from TODO)
+- **Relative Path Issue**: `import mod from './mod.js'` paths may break
+- **Solution**: Check and fix module resolution in split/normalize functions
+
+### Debugging Strategies
+- **CLI Output**: Commands should provide clear progress feedback
+- **File Inspection**: Use `--inspect` flag with unzip to preview contents
+- **Error Handling**: Check for proper error messages in each module
+
+### Environment Issues
+- **API Key**: Ensure `ANTHROPIC_API_KEY` is set in `.env`
+- **Dependencies**: Run `bun install` if modules are missing
+- **Build**: Always build before testing CLI: `bun run build`
+
+## File Processing Pipeline
+Test the complete workflow:
+1. `download` → Downloads CRX file
+2. `unzip` → Extracts to output directory
+3. `split` → Separates bundled code
+4. `normalize` → Beautifies formatting
+5. `rewrite` → AI-powered readability improvement
+
+## Output Validation
+- Check that extracted files maintain proper structure
+- Verify that rewritten code preserves functionality
+- Ensure output paths are correctly resolved

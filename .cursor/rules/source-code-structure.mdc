@@ -1,0 +1,40 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Source Code Structure
+
+## Module Organization
+Each core functionality is implemented as a separate TypeScript module in [src/](mdc:src/):
+
+### Core Modules
+- **[src/download.ts](mdc:src/download.ts)** - Downloads CRX files from Chrome Web Store URLs
+- **[src/unzip.ts](mdc:src/unzip.ts)** - Extracts and analyzes CRX/ZIP file contents
+- **[src/split.ts](mdc:src/split.ts)** - Splits large bundled JavaScript files into smaller chunks
+- **[src/normalize.ts](mdc:src/normalize.ts)** - Normalizes and beautifies code formatting
+- **[src/rewrite.ts](mdc:src/rewrite.ts)** - AI-powered code rewriting using Anthropic Claude
+
+### Entry Points
+- **[src/index.ts](mdc:src/index.ts)** - Main module that exports all functions
+- **[cli.js](mdc:cli.js)** - CLI interface that imports from built `dist/index.js`
+
+## Module Dependencies
+- All modules are independent and can be used separately
+- Common pattern: Each module exports a single main function
+- CLI commands map 1:1 to module functions
+- All modules use async/await for asynchronous operations
+
+## Import/Export Pattern
+```typescript
+// Each module exports its main function
+export { functionName } from './module';
+
+// CLI imports from built dist
+import { functionName } from './dist/index.js';
+```
+
+## Configuration Files
+- **[package.json](mdc:package.json)** - Project metadata, dependencies, and scripts
+- **[tsconfig.json](mdc:tsconfig.json)** - TypeScript compiler configuration
+- **[bun.lockb](mdc:bun.lockb)** - Bun dependency lock file

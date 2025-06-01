@@ -1,0 +1,39 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Development Workflow
+
+## Environment Setup
+1. **Install Bun**: This project is optimized for Bun runtime
+2. **Environment Variables**: Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`
+3. **Dependencies**: Run `bun install` to install all dependencies
+
+## Build Process
+- **Build Command**: `bun run build` compiles TypeScript to `dist/` directory
+- **Build Target**: Node.js compatible output in `dist/index.js`
+- **Source Files**: All TypeScript source in [src/](mdc:src/) directory
+
+## Development Commands
+```bash
+bun install          # Install dependencies
+bun run build       # Build TypeScript to dist/
+bun run ./cli.js    # Run CLI locally
+```
+
+## CLI Usage Pattern
+All commands follow the pattern: `urcrx <command> [options]`
+
+Available commands:
+- `download <url>` - Download CRX file from Chrome Web Store
+- `unzip <path>` - Extract CRX file contents
+- `split` - Split large bundled JS files
+- `normalize` - Beautify and format code
+- `rewrite` - AI-powered code rewriting for readability
+
+## Code Style
+- **TypeScript**: Strict typing enabled in [tsconfig.json](mdc:tsconfig.json)
+- **Prettier**: Configured with import sorting plugin
+- **ES Modules**: All imports/exports use ES module syntax
+- **Async/Await**: Prefer async/await over Promises

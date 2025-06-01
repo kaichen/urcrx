@@ -1,0 +1,45 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# AI Integration Guide
+
+## Anthropic Claude Integration
+The project uses Anthropic's Claude API for intelligent code rewriting in [src/rewrite.ts](mdc:src/rewrite.ts).
+
+## Environment Configuration
+- **Required**: `ANTHROPIC_API_KEY` in `.env` file
+- **API Client**: Uses `@anthropic-ai/sdk` package
+- **Model**: Configured to use Claude for code analysis and rewriting
+
+## Rewrite Functionality
+The `rewrite` command processes compressed/minified JavaScript:
+1. Reads minified/compressed code files
+2. Sends code to Claude API with specific prompts
+3. Receives readable, well-formatted code
+4. Saves rewritten code to output files
+
+## AI Prompt Strategy
+- Focus on making compressed code readable
+- Preserve original functionality
+- Add meaningful variable names
+- Improve code structure and comments
+- Handle various JavaScript compression techniques
+
+## Usage Pattern
+```bash
+urcrx rewrite --path /path/to/compressed-code.js
+```
+
+## Future AI Enhancements (TODOs)
+- Token usage tracking and limitations
+- Integration with multiple LLM providers
+- Automatic codebase documentation generation
+- Conversational interface for recovered code
+
+## Best Practices
+- Always backup original files before rewriting
+- Review AI-generated code for accuracy
+- Test rewritten code functionality
+- Monitor API usage and costs

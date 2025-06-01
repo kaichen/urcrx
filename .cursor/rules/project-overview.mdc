@@ -1,0 +1,28 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Overview
+
+URCRX (Unroll Chrome Extension) is a CLI tool for reverse engineering Chrome extensions from CRX files. The project helps extract, process, and make readable the compressed/minified code found in Chrome extension packages.
+
+## Project Purpose
+- Download Chrome extension CRX files
+- Unzip and extract extension contents
+- Split large bundled JavaScript files
+- Normalize and beautify code
+- Use AI to rewrite compressed code into readable format
+
+## Core Architecture
+- **Entry Point**: [cli.js](mdc:cli.js) - Command-line interface using Commander.js
+- **Main Module**: [src/index.ts](mdc:src/index.ts) - Exports all core functions
+- **Build Target**: Node.js executable via Bun build system
+- **Runtime**: Designed for Bun but compatible with Node.js
+
+## Tech Stack
+- **Runtime**: Bun (recommended) or Node.js
+- **Language**: TypeScript with ES modules
+- **CLI Framework**: Commander.js
+- **AI Integration**: Anthropic Claude API for code rewriting
+- **Utilities**: js-beautify for code formatting, yauzl for ZIP extraction
