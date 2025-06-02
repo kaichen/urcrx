@@ -1,6 +1,8 @@
 import fs from "fs/promises"
 import path from "path"
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText } from "ai"
+import { anthropic } from "@ai-sdk/anthropic"
+import { openai } from "@ai-sdk/openai"
 
 function convertHtmlEntities(input: string): string {
   return input
@@ -11,80 +13,103 @@ function convertHtmlEntities(input: string): string {
       .replace(/&#39;/g, "'");
 }
 
-const anthropic = new Anthropic()
+// Automatically detect available AI providers
+function detectAvailableProvider() {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  
+  // Priority: Anthropic > OpenAI (Anthropic typically performs better for code rewriting)
+  if (anthropicKey) {
+    console.log("🤖 Using Anthropic Claude 3.5 Sonnet provider");
+    return {
+      model: anthropic("claude-3-5-sonnet-20241022"),
+      provider: "anthropic"
+    };
+  }
+  
+  if (openaiKey) {
+    console.log("🤖 Using OpenAI GPT-4 Turbo provider");
+    return {
+      model: openai("gpt-4-turbo-preview"),
+      provider: "openai"
+    };
+  }
+  
+  throw new Error(`
+❌ No available API key found.
 
-// 定义 writeFile 工具函数
+Please set one of the following environment variables:
+  • ANTHROPIC_API_KEY (recommended, Claude performs better for code rewriting)
+  • OPENAI_API_KEY
+
+Example:
+  export ANTHROPIC_API_KEY="your_key_here"
+  export OPENAI_API_KEY="your_key_here"
+  `);
+}
+
+// Define writeFile utility function
 const writeFile = async (filePath: string, fileExtension: string, content: string) => {
   try {
     const originalExt = path.extname(filePath);
     const filePathWithoutExt = filePath.slice(0, -originalExt.length);
     await fs.writeFile(`${filePathWithoutExt}.rewritten${fileExtension}`, content);
-    console.log(`文件已成功写入：${filePath}`)
+    console.log(`File successfully written: ${filePath}`)
   } catch (error) {
-    console.error(`写入文件时发生错误：${error}`)
+    console.error(`Error writing file: ${error}`)
   }
 }
 
 export async function rewrite(filePath: string) {
   try {
-    // 读取文件内容
+    // Read file content
     const code = await fs.readFile(filePath, "utf-8")
-    const userMessage: Anthropic.MessageParam = {
-      role: 'user',
-      content: `你作为编程助手，竭尽所能完成我提出代码改写。
-  我会给出被压缩过的 JavaScript 或 JSX 代码，你仔细阅读代码，将它还原回正常可阅读维护代码，最后调用工具保存。
-  按照以下规则进行重写，
-  1. 将变量和函数命名根据代码上下文进行推断得到合适命名。
-  2. 忽略 var n = e("@parcel/transformer-js/src/esmodule-helpers.js");
-  3. 将 n.defineInteropFlag(r), n.export(r, "getDefaultPreamble", () => l); 视为 export 当前文件中的 l 为 getDefaultPreamble
-  4. 如果发现代码包含 React 组件将代码还原回 jsx 代码，无需包含 react/jsx-runtime，使用 <> 而非 <React.Fragment>
-  提供的 tools：
-  - save_rewritten_code 将改写后的代码写入指定文件
-  注意，如果选择调用 tools，则无需将结果代码回复我，仅需要调用 tools
-  以下是你需要改写的原始代码：\n\n${code}`
-    };
-  
-    const tools: Anthropic.Tool[] = [
-      {
-        name: "save_rewritten_code",
-        description: "save the rewritten code to the file",
-        input_schema: {
-          type: "object",
-          properties: {
-            file_extension: {
-              type: "string",
-              description: "The file extension of the file. This should be a valid file extension such as .js or .jsx."
-            },
-            source_code: {
-              type: "string",
-              description: "The content of the file. This should include all necessary code, comments, and formatting."
-            }
-          },
-          required: ["source_code"]
-        }
-      }
-    ]
+    
+    const prompt = `You are a programming assistant, doing your best to complete the code rewrite I propose.
+I will provide compressed JavaScript or JSX code, and you should carefully read it and restore it to normal, readable, and maintainable code.
+Follow these rules for rewriting:
+1. Infer appropriate variable and function names based on code context.
+2. Ignore var n = e("@parcel/transformer-js/src/esmodule-helpers.js");
+3. Treat n.defineInteropFlag(r), n.export(r, "getDefaultPreamble", () => l); as exporting l as getDefaultPreamble from the current file
+4. If the code contains React components, restore it to JSX code without including react/jsx-runtime, use <> instead of <React.Fragment>
 
-    // 调用 Anthropic API 重写代码
-    const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20240620",
-      max_tokens: 8192,
-      messages: [userMessage],
-      tools
-    })
+Please only return the rewritten code, without any explanations or formatting markers.
 
-    // 获取重写后的代码和工具调用
-    const toolUse = message.content.find(item => item.type === "tool_use");
+Here is the original code you need to rewrite:
 
-    console.log(message, toolUse)
+${code}`;
 
-    if (message.stop_reason === 'tool_use' && toolUse) {
-        const { name, input } = toolUse;
-        if (name === "save_rewritten_code") {
-          await writeFile(filePath, input['file_extension'], convertHtmlEntities(input['source_code']));
-        }
-    }
+    // Automatically detect and use available AI provider
+    const { model, provider } = detectAvailableProvider();
+    
+    const { text } = await generateText({
+      model,
+      prompt,
+      maxTokens: 8192,
+      temperature: 0.1,
+    });
+
+    // Infer file extension
+    const fileExtension = inferFileExtension(text);
+    
+    // Process HTML entities and save file
+    const cleanedCode = convertHtmlEntities(text);
+    await writeFile(filePath, fileExtension, cleanedCode);
+    
+    console.log(`✅ Code rewrite completed, saved to: ${filePath}${fileExtension}`);
   } catch (error) {
-    console.error("发生错误：", error)
+    console.error("Error occurred:", error)
   }
+}
+
+// Helper function to infer file extension
+function inferFileExtension(code: string): string {
+  // Check if code contains JSX syntax
+  if (code.includes('jsx') || 
+      code.includes('<') && code.includes('/>') ||
+      code.includes('React') ||
+      code.includes('return (')) {
+    return '.jsx';
+  }
+  return '.js';
 }

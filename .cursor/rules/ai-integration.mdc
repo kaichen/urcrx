@@ -1,17 +1,27 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 # AI Integration Guide
 
-## Anthropic Claude Integration
-The project uses Anthropic's Claude API for intelligent code rewriting in [src/rewrite.ts](mdc:src/rewrite.ts).
+## AI SDK Integration
+The project uses AI SDK with multiple provider support for intelligent code rewriting in [src/rewrite.ts](mdc:src/rewrite.ts).
+
+## Supported Providers
+- **Anthropic Claude**
+- **OpenAI GPT**
 
 ## Environment Configuration
-- **Required**: `ANTHROPIC_API_KEY` in `.env` file
-- **API Client**: Uses `@anthropic-ai/sdk` package
-- **Model**: Configured to use Claude for code analysis and rewriting
+The system automatically detects available API keys and selects the best provider:
+
+### Priority Order
+1. **ANTHROPIC_API_KEY** - Uses Claude 3.5 Sonnet (preferred for code rewriting)
+2. **OPENAI_API_KEY** - Uses GPT-4 Turbo (fallback option)
+
+### API Packages
+- **Core**: `ai` (AI SDK core)
+- **Providers**: `@ai-sdk/anthropic`, `@ai-sdk/openai`
 
 ## Rewrite Functionality
 The `rewrite` command processes compressed/minified JavaScript:

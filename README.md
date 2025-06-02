@@ -10,7 +10,9 @@ Coding with cursor editor.
 
 ## Usage
 
-copy .env.example to .env and fill ANTHROPIC_API_KEY.
+copy .env.example to .env and fill at least one of the supported API keys:
+- `ANTHROPIC_API_KEY` (recommended for better code rewriting)
+- `OPENAI_API_KEY` (fallback option)
 
 ### Quick Start (Default Command)
 

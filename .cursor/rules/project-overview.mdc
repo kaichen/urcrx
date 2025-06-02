@@ -24,5 +24,5 @@ URCRX (Unroll Chrome Extension) is a CLI tool for reverse engineering Chrome ext
 - **Runtime**: Bun (recommended) or Node.js
 - **Language**: TypeScript with ES modules
 - **CLI Framework**: Commander.js
-- **AI Integration**: Anthropic Claude API for code rewriting
+- **AI Integration**: AI SDK with multi-provider support (Anthropic Claude, OpenAI GPT) for code rewriting
 - **Utilities**: js-beautify for code formatting, yauzl for ZIP extraction
