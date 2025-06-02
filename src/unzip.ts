@@ -82,26 +82,26 @@ export function unzip(filePath: string, targetFile?: string, outputDir: string =
       }
 
       if (!targetFile) {
-        // Only process all .js files, don't show file tree
-        const jsFiles: yauzl.Entry[] = [];
+        // Process .js, .json, and .html files
+        const targetFiles: yauzl.Entry[] = [];
         zipfile.readEntry();
         zipfile.on('entry', (entry) => {
-          if (entry.fileName.endsWith('.js')) {
-            jsFiles.push(entry);
+          if (entry.fileName.endsWith('.js') || entry.fileName.endsWith('.json') || entry.fileName.endsWith('.html')) {
+            targetFiles.push(entry);
           }
           zipfile.readEntry();
         });
         zipfile.on('end', () => {
-          if (jsFiles.length === 0) {
-            console.log('No .js files found.');
+          if (targetFiles.length === 0) {
+            console.log('No .js, .json, or .html files found.');
             zipfile.close();
             resolve();
             return;
           }
           let finished = 0;
           let hasError = false;
-          jsFiles.forEach((entry) => {
-            processJsFile(entry, zipfile, outputDir, (error?: Error) => {
+          targetFiles.forEach((entry) => {
+            processFile(entry, zipfile, outputDir, (error?: Error) => {
               if (error && !hasError) {
                 hasError = true;
                 zipfile.close();
@@ -109,9 +109,9 @@ export function unzip(filePath: string, targetFile?: string, outputDir: string =
                 return;
               }
               finished++;
-              if (finished === jsFiles.length && !hasError) {
+              if (finished === targetFiles.length && !hasError) {
                 zipfile.close();
-                console.log('All .js files processed.');
+                console.log('All target files processed.');
                 resolve();
               }
             });
@@ -125,9 +125,11 @@ export function unzip(filePath: string, targetFile?: string, outputDir: string =
       } else {
         zipfile.readEntry();
         zipfile.on('entry', (entry) => {
-          const genericFileName = entry.fileName.split('.')[0] + '.js';
-          if (entry.fileName === targetFile || (genericFileName === targetFile && entry.fileName.endsWith('.js'))) {
-            processJsFile(entry, zipfile, outputDir, (error?: Error) => {
+          const parsed = path.parse(entry.fileName);
+          const genericFileName = parsed.name + parsed.ext;
+          if (entry.fileName === targetFile || 
+              (genericFileName === targetFile && (entry.fileName.endsWith('.js') || entry.fileName.endsWith('.json') || entry.fileName.endsWith('.html')))) {
+            processFile(entry, zipfile, outputDir, (error?: Error) => {
               zipfile.close();
               if (error) {
                 reject(error);
@@ -144,10 +146,10 @@ export function unzip(filePath: string, targetFile?: string, outputDir: string =
   });
 }
 
-function processJsFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: string, onFinish: (error?: Error) => void) {
-  // Maintain original directory structure and rename .js files to genericFileName
+function processFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: string, onFinish: (error?: Error) => void) {
+  // Maintain original directory structure and preserve original file extension
   const parsed = path.parse(entry.fileName);
-  const genericFileName = parsed.name + '.js';
+  const genericFileName = parsed.name + parsed.ext;
   const relativeDir = parsed.dir; // Can be '' or multi-level directory
   const outputDirPath = path.join(outputDir, relativeDir);
   const outputPath = path.join(outputDirPath, genericFileName);
@@ -171,13 +173,37 @@ function processJsFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: st
       // Read the extracted file content
       const fileContent = fs.readFileSync(outputPath, 'utf8');
 
-      // Beautify file content using js-beautify
-      const beautifiedContent = beautify.js(fileContent, { indent_size: 2, space_in_empty_paren: true });
+      // Beautify file content based on file type
+      let beautifiedContent: string;
+      const fileExtension = parsed.ext.toLowerCase();
+      
+      try {
+        switch (fileExtension) {
+          case '.js':
+            beautifiedContent = beautify.js(fileContent, { indent_size: 2, space_in_empty_paren: true });
+            break;
+          case '.html':
+            beautifiedContent = beautify.html(fileContent, { indent_size: 2, wrap_line_length: 120 });
+            break;
+          case '.json':
+            // Parse and stringify JSON for proper formatting
+            const jsonData = JSON.parse(fileContent);
+            beautifiedContent = JSON.stringify(jsonData, null, 2);
+            break;
+          default:
+            // Fallback to original content if no specific beautifier
+            beautifiedContent = fileContent;
+            break;
+        }
 
-      // Write beautified content back to file
-      fs.writeFileSync(outputPath, beautifiedContent);
-
-      console.log(`File ${outputPath} successfully beautified`);
+        // Write beautified content back to file
+        fs.writeFileSync(outputPath, beautifiedContent);
+        console.log(`File ${outputPath} successfully beautified`);
+      } catch (error) {
+        console.warn(`Warning: Failed to beautify ${outputPath}, keeping original content. Error: ${error}`);
+        // Keep the original content if beautification fails
+      }
+      
       onFinish();
     });
     writeStream.on('error', (err) => {

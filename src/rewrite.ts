@@ -1,8 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { generateText } from "ai"
-import { anthropic } from "@ai-sdk/anthropic"
-import { openai } from "@ai-sdk/openai"
+import { getLLMProvider } from "./llm"
 
 function convertHtmlEntities(input: string): string {
   return input
@@ -11,41 +10,6 @@ function convertHtmlEntities(input: string): string {
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'");
-}
-
-// Automatically detect available AI providers
-function detectAvailableProvider() {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const openaiKey = process.env.OPENAI_API_KEY;
-  
-  // Priority: Anthropic > OpenAI (Anthropic typically performs better for code rewriting)
-  if (anthropicKey) {
-    console.log("🤖 Using Anthropic Claude 3.5 Sonnet provider");
-    return {
-      model: anthropic("claude-3-5-sonnet-20241022"),
-      provider: "anthropic"
-    };
-  }
-  
-  if (openaiKey) {
-    console.log("🤖 Using OpenAI GPT-4 Turbo provider");
-    return {
-      model: openai("gpt-4-turbo-preview"),
-      provider: "openai"
-    };
-  }
-  
-  throw new Error(`
-❌ No available API key found.
-
-Please set one of the following environment variables:
-  • ANTHROPIC_API_KEY (recommended, Claude performs better for code rewriting)
-  • OPENAI_API_KEY
-
-Example:
-  export ANTHROPIC_API_KEY="your_key_here"
-  export OPENAI_API_KEY="your_key_here"
-  `);
 }
 
 // Define writeFile utility function
@@ -80,7 +44,7 @@ Here is the original code you need to rewrite:
 ${code}`;
 
     // Automatically detect and use available AI provider
-    const { model, provider } = detectAvailableProvider();
+    const { model, provider } = getLLMProvider();
     
     const { text } = await generateText({
       model,

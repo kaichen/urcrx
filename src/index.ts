@@ -3,6 +3,8 @@ import { unzip } from './unzip';
 import { split } from './split';
 import { normalize } from './normalize';
 import { rewrite } from './rewrite';
+import { analyzeExtension } from './analyze';
+import { detectAvailableProvider, generateLLMText, getLLMProvider } from './llm';
 
 // Default command: Download and extract CRX to specified directory
 export async function processExtension(url: string): Promise<void> {
@@ -28,6 +30,10 @@ export async function processExtension(url: string): Promise<void> {
     console.log('Extracting files...');
     await unzip(tempCrxPath, undefined, outputDir, false);
     
+    // 3. Analyze extracted extension and generate learning plan
+    console.log('Analyzing extension structure...');
+    await analyzeExtension(outputDir);
+    
     console.log(`Extension successfully processed to: ${outputDir}`);
     
   } catch (error) {
@@ -52,4 +58,4 @@ function extractExtensionId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-export { downloadCrx, unzip, split, normalize, rewrite };
+export { downloadCrx, unzip, split, normalize, rewrite, analyzeExtension, detectAvailableProvider, generateLLMText, getLLMProvider };

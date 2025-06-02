@@ -1,6 +1,6 @@
 // ECMAScript (.mjs)
 import { Command } from 'commander';
-import { downloadCrx, unzip, split, normalize, rewrite, processExtension } from './dist/index.js';
+import { downloadCrx, unzip, split, normalize, rewrite, analyzeExtension, processExtension } from './dist/index.js';
 const program = new Command();
 
 // Default command: Process CRX URL
@@ -49,6 +49,13 @@ program.command('rewrite')
   .option('-p, --path <path>', 'extension file path')
   .action(async (options) => {
     await rewrite(options.path);
+  });
+
+program.command('analyze')
+  .description('analyze extension structure and generate learning plan')
+  .option('-p, --path <path>', 'extension directory path')
+  .action(async (options) => {
+    await analyzeExtension(options.path);
   });
 
 program.parse(process.argv);
