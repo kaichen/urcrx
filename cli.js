@@ -1,7 +1,19 @@
 // ECMAScript (.mjs)
 import { Command } from 'commander';
-import { downloadCrx, unzip, split, normalize, rewrite } from './dist/index.js';
+import { downloadCrx, unzip, split, normalize, rewrite, processExtension } from './dist/index.js';
 const program = new Command();
+
+// Default command: Process CRX URL
+program
+  .argument('[url]', 'Chrome extension URL')
+  .description('Download and extract Chrome extension to output/$id directory')
+  .action(async (url) => {
+    if (url) {
+      await processExtension(url);
+    } else {
+      program.help();
+    }
+  });
 
 program.command('download <url>')
   .description('download extension')

@@ -1,6 +1,7 @@
 {
   "name": "urcrx",
   "version": "0.1.0",
+  "type": "module",
   "repository": "https://github.com/kaichen/urcrx",
   "license": "MIT",
   "author": {

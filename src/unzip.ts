@@ -18,14 +18,14 @@ function crxToZip(buf: Buffer): Buffer {
   }
 
   if (buf[0] !== 67 || buf[1] !== 114 || buf[2] !== 50 || buf[3] !== 52) {
-    throw new Error("无效的头部: 不是以Cr24开始");
+    throw new Error("Invalid header: does not start with Cr24");
   }
 
   const isV3 = buf[4] === 3;
   const isV2 = buf[4] === 2;
 
   if ((!isV2 && !isV3) || buf[5] || buf[6] || buf[7]) {
-    throw new Error("意外的crx格式版本号");
+    throw new Error("Unexpected crx format version");
   }
 
   if (isV2) {
@@ -40,102 +40,122 @@ function crxToZip(buf: Buffer): Buffer {
   }
 }
 
-export function unzip(filePath: string, targetFile?: string, outputDir: string = 'output', inspect: boolean = false): void {
-  const fileBuffer = fs.readFileSync(filePath);
-  const zipBuffer = crxToZip(fileBuffer);
+export function unzip(filePath: string, targetFile?: string, outputDir: string = 'output', inspect: boolean = false): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const fileBuffer = fs.readFileSync(filePath);
+    const zipBuffer = crxToZip(fileBuffer);
 
-  // 自动创建 outputDir
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  yauzl.fromBuffer(zipBuffer, {lazyEntries: true}, (err, zipfile) => {
-    if (err) {
-      console.error('打开zip文件时发生错误:', err);
-      return;
+    // Automatically create outputDir
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    // inspect 模式：只打印文件树
-    if (inspect) {
-      const files: string[] = [];
-      zipfile.readEntry();
-      zipfile.on('entry', (entry) => {
-        files.push(entry.fileName);
-        zipfile.readEntry();
-      });
-      zipfile.on('end', () => {
-        console.log('【--inspect模式】文件树如下:');
-        const tree = buildTree(files);
-        printTree(tree);
-        console.log(`共 ${files.length} 个文件。`);
-        zipfile.close();
-      });
-      zipfile.on('error', (err) => {
-        console.error('读取zip条目时发生错误:', err);
-        zipfile.close();
-      });
-      return;
-    }
+    yauzl.fromBuffer(zipBuffer, {lazyEntries: true}, (err, zipfile) => {
+      if (err) {
+        console.error('Error opening zip file:', err);
+        reject(err);
+        return;
+      }
 
-    if (!targetFile) {
-      // 只处理所有.js文件，不显示文件树
-      const jsFiles: yauzl.Entry[] = [];
-      zipfile.readEntry();
-      zipfile.on('entry', (entry) => {
-        if (entry.fileName.endsWith('.js')) {
-          jsFiles.push(entry);
-        }
+      // inspect mode: only print file tree
+      if (inspect) {
+        const files: string[] = [];
         zipfile.readEntry();
-      });
-      zipfile.on('end', () => {
-        if (jsFiles.length === 0) {
-          console.log('未找到任何.js文件。');
+        zipfile.on('entry', (entry) => {
+          files.push(entry.fileName);
+          zipfile.readEntry();
+        });
+        zipfile.on('end', () => {
+          console.log('【--inspect mode】File tree:');
+          const tree = buildTree(files);
+          printTree(tree);
+          console.log(`Total ${files.length} files.`);
           zipfile.close();
-          return;
-        }
-        let finished = 0;
-        jsFiles.forEach((entry) => {
-          processJsFile(entry, zipfile, outputDir, () => {
-            finished++;
-            if (finished === jsFiles.length) {
-              zipfile.close();
-              console.log('所有.js文件处理完毕。');
-            }
+          resolve();
+        });
+        zipfile.on('error', (err) => {
+          console.error('Error reading zip entries:', err);
+          zipfile.close();
+          reject(err);
+        });
+        return;
+      }
+
+      if (!targetFile) {
+        // Only process all .js files, don't show file tree
+        const jsFiles: yauzl.Entry[] = [];
+        zipfile.readEntry();
+        zipfile.on('entry', (entry) => {
+          if (entry.fileName.endsWith('.js')) {
+            jsFiles.push(entry);
+          }
+          zipfile.readEntry();
+        });
+        zipfile.on('end', () => {
+          if (jsFiles.length === 0) {
+            console.log('No .js files found.');
+            zipfile.close();
+            resolve();
+            return;
+          }
+          let finished = 0;
+          let hasError = false;
+          jsFiles.forEach((entry) => {
+            processJsFile(entry, zipfile, outputDir, (error?: Error) => {
+              if (error && !hasError) {
+                hasError = true;
+                zipfile.close();
+                reject(error);
+                return;
+              }
+              finished++;
+              if (finished === jsFiles.length && !hasError) {
+                zipfile.close();
+                console.log('All .js files processed.');
+                resolve();
+              }
+            });
           });
         });
-      });
-      zipfile.on('error', (err) => {
-        console.error('读取zip条目时发生错误:', err);
-        zipfile.close();
-      });
-    } else {
-      zipfile.readEntry();
-      zipfile.on('entry', (entry) => {
-        const genericFileName = entry.fileName.split('.')[0] + '.js';
-        if (entry.fileName === targetFile || (genericFileName === targetFile && entry.fileName.endsWith('.js'))) {
-          processJsFile(entry, zipfile, outputDir, () => {
-            zipfile.close();
-          });
-        } else {
-          zipfile.readEntry();
-        }
-      });
-    }
+        zipfile.on('error', (err) => {
+          console.error('Error reading zip entries:', err);
+          zipfile.close();
+          reject(err);
+        });
+      } else {
+        zipfile.readEntry();
+        zipfile.on('entry', (entry) => {
+          const genericFileName = entry.fileName.split('.')[0] + '.js';
+          if (entry.fileName === targetFile || (genericFileName === targetFile && entry.fileName.endsWith('.js'))) {
+            processJsFile(entry, zipfile, outputDir, (error?: Error) => {
+              zipfile.close();
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
+            });
+          } else {
+            zipfile.readEntry();
+          }
+        });
+      }
+    });
   });
 }
 
-function processJsFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: string, onFinish: () => void) {
-  // 保持原有目录结构，且 .js 文件重命名为 genericFileName
+function processJsFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: string, onFinish: (error?: Error) => void) {
+  // Maintain original directory structure and rename .js files to genericFileName
   const parsed = path.parse(entry.fileName);
   const genericFileName = parsed.name + '.js';
-  const relativeDir = parsed.dir; // 可能为''或多级目录
+  const relativeDir = parsed.dir; // Can be '' or multi-level directory
   const outputDirPath = path.join(outputDir, relativeDir);
   const outputPath = path.join(outputDirPath, genericFileName);
 
   zipfile.openReadStream(entry, (err, readStream) => {
     if (err) {
-      console.error('读取文件流时发生错误:', err);
-      onFinish();
+      console.error('Error reading file stream:', err);
+      onFinish(err);
       return;
     }
 
@@ -146,28 +166,28 @@ function processJsFile(entry: yauzl.Entry, zipfile: yauzl.ZipFile, outputDir: st
     const writeStream = fs.createWriteStream(outputPath);
     readStream.pipe(writeStream);
     writeStream.on('finish', () => {
-      console.log(`文件 ${entry.fileName} 已成功解压到 ${outputPath}`);
+      console.log(`File ${entry.fileName} successfully extracted to ${outputPath}`);
 
-      // 读取解压后的文件内容
+      // Read the extracted file content
       const fileContent = fs.readFileSync(outputPath, 'utf8');
 
-      // 使用js-beautify美化文件内容
+      // Beautify file content using js-beautify
       const beautifiedContent = beautify.js(fileContent, { indent_size: 2, space_in_empty_paren: true });
 
-      // 将美化后的内容写回文件
+      // Write beautified content back to file
       fs.writeFileSync(outputPath, beautifiedContent);
 
-      console.log(`文件 ${outputPath} 已成功美化`);
+      console.log(`File ${outputPath} successfully beautified`);
       onFinish();
     });
     writeStream.on('error', (err) => {
-      console.error('写入文件时发生错误:', err);
-      onFinish();
+      console.error('Error writing file:', err);
+      onFinish(err);
     });
   });
 }
 
-// 仅 inspect 模式下需要的辅助函数
+// Helper functions only needed in inspect mode
 interface TreeNode {
   [key: string]: TreeNode | null;
 }
